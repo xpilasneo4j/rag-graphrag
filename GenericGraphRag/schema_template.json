@@ -1,0 +1,38 @@
+{
+  "node_types": [
+    "Node1",
+    {
+      "label": "Node2",
+      "description": "Node 2 description",
+      "properties": [
+        {"name": "property_name_node_2", "type": "property_type_node_2"}
+      ]
+    },
+    {
+      "label": "Node3",
+      "properties": [
+        {"name": "property_name_node_3_1", "type": "property_type_node_3_1"},
+        {"name": "property_name_node_3_2", "type": "property_type_node_3_2"}
+      ]
+    }
+  ],
+  "relationship_types": [
+    "REL_1",
+    "REL_2",
+    {
+      "label": "REL_3",
+      "description": "Description Rel 3"
+    },
+    {
+      "label": "Rel 4",
+      "properties": [
+        {"name": "property_name_rel_4", "type": "property_type_rel_4"}
+      ]
+    }
+  ],
+  "patterns": [
+    ["Node1", "Rel1", "Node2"],
+    ["Node3", "Rel2", "Node1"],
+    ["Mode2", "Rel3", "Node1"]
+  ]
+}

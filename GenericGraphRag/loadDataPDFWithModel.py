@@ -51,7 +51,6 @@ create_vector_index(NEO4J_DRIVER, name="text_embeddings", label="Chunk",
 EMBEDDINGS=AzureOpenAIEmbeddings(
     model=EMB_MODEL_NAME,
     api_version=EMB_API_VERSION,
-    dimensions=int(EMB_SIZE)
 )
 
 # Pipeline execution

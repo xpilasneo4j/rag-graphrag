@@ -8,5 +8,5 @@
   - loadDataPDFWithModel.py to generate RAG/GraphRAG with a specific model filled in a schema.json file
   - chatbot.py to run the streamlit app to query the RAG/GraphRAG
 - libs needed:
-  - neo4j_graphrag (https://pypi.org/project/neo4j-graphrag/, https://neo4j.com/docs/neo4j-graphrag-python/current/)
-  - streamlit
+  - For data loading, *python* and *neo4j_graphrag* (https://pypi.org/project/neo4j-graphrag/, https://neo4j.com/docs/neo4j-graphrag-python/current/)
+  - For the chatbot, you need to add streamlit

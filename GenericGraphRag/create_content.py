@@ -14,7 +14,7 @@ import configparser
 import sys
 
 if len(sys.argv) != 2:
-    sys.exit("Please provide as an argument a env file built on the template.env provided")
+    sys.exit("Please provide as an argument an env file built on the template.env provided")
 else:
     ENV_FILE = sys.argv[1]
 
@@ -47,7 +47,7 @@ class PDFTextExtractor:
             complete_text = []
 
             for page_num in range(len(self.doc)):
-                self.logger.info(f"Processing page {page_num + 1}/{len(self.doc)}")
+                self.logger.debug(f"Processing page {page_num + 1}/{len(self.doc)}")
 
                 # Add page header
                 complete_text.append(f"\n{'='*80}")
@@ -74,8 +74,8 @@ class PDFTextExtractor:
 
             return '\n'.join(complete_text)
 
-        except Exception as e:
-            self.logger.error(f"Error extracting text: {e}")
+        except Exception as ex:
+            self.logger.error(f"Error extracting text: {ex}")
             return ""
 
     def _extract_text_with_layout(self, page_num: int) -> str:
@@ -98,8 +98,8 @@ class PDFTextExtractor:
 
                     return text or ""
 
-        except Exception as e:
-            self.logger.warning(f"Error extracting text from page {page_num + 1}: {e}")
+        except Exception as ex:
+            self.logger.warning(f"Error extracting text from page {page_num + 1}: {ex}")
             # Final fallback
             page = self.doc.load_page(page_num)
             return page.get_text()
@@ -131,8 +131,8 @@ class PDFTextExtractor:
                         table_text += f"\n--- END TABLE {i+1} ---\n"
                         table_texts.append(table_text)
 
-            except Exception as e:
-                self.logger.debug(f"Camelot failed for page {page_num + 1}: {e}")
+            except Exception as ex:
+                self.logger.debug(f"Camelot failed for page {page_num + 1}: {ex}")
 
             # Try pdfplumber as backup
             if len(table_texts) == 0:
@@ -150,11 +150,11 @@ class PDFTextExtractor:
                                     table_text += f"\n--- END TABLE {i+1} ---\n"
                                     table_texts.append(table_text)
 
-                except Exception as e:
-                    self.logger.debug(f"Pdfplumber table extraction failed for page {page_num + 1}: {e}")
+                except Exception as ex:
+                    self.logger.debug(f"Pdfplumber table extraction failed for page {page_num + 1}: {ex}")
 
-        except Exception as e:
-            self.logger.warning(f"Table extraction failed for page {page_num + 1}: {e}")
+        except Exception as ex:
+            self.logger.warning(f"Table extraction failed for page {page_num + 1}: {ex}")
 
         return table_texts
 
@@ -192,12 +192,12 @@ class PDFTextExtractor:
 
                     pix = None  # Free memory
 
-                except Exception as e:
-                    self.logger.debug(f"Error processing image {img_index} on page {page_num + 1}: {e}")
+                except Exception as ex:
+                    self.logger.debug(f"Error processing image {img_index} on page {page_num + 1}: {ex}")
                     continue
 
-        except Exception as e:
-            self.logger.warning(f"Image extraction failed for page {page_num + 1}: {e}")
+        except Exception as ex:
+            self.logger.warning(f"Image extraction failed for page {page_num + 1}: {ex}")
 
         return image_texts
 
@@ -271,9 +271,9 @@ class PDFTextExtractor:
 
         return text.strip()
 
-    def save_text(self, doc: str, output_path: str = "extracted_text.txt"):
+    def save_text(self, doc: str, output_dir: str):
         """Extract and save complete text to file"""
-        self.logger.info("Starting text extraction...")
+        self.logger.info(f"Starting text extraction for {doc}...")
         complete_text = self.extract_complete_text()
 
         # Add document header
@@ -289,16 +289,18 @@ Total Pages: {len(self.doc) if self.doc else 'Unknown'}
         final_text = header + complete_text
 
         # Save to file
-        with open(output_path, 'w', encoding='utf-8') as f:
+        with open(output_dir + os.sep + "extracted_text.txt", 'w', encoding='utf-8') as f:
             f.write(final_text)
 
-        self.logger.info(f"Text extraction completed. Saved to: {output_path}")
+        self.logger.info(f"Text extraction completed. Saved to: {output_dir}")
         self.logger.info(f"Total characters extracted: {len(final_text):,}")
 
         return final_text
 
-    def save_structured_text(self, output_dir: str):
+    def save_structured_text(self, doc: str, output_dir: str):
         """Save text in structured format with separate sections"""
+        self.logger.info(f"Starting structured text extraction for {doc}...")
+
         Path(output_dir).mkdir(exist_ok=True)
 
         complete_text = self.extract_complete_text()
@@ -359,15 +361,15 @@ FILE STRUCTURE:
 """
         return summary
 
-def extract_pdf_text(pdf_path: str, cpt: int, output_path: str):
+def extract_pdf_text(file_path: str, cpt: int, output_path: str):
     """Simple function to extract text from PDF"""
-    extractor = PDFTextExtractor(pdf_path)
-    return extractor.save_text(pdf_path, str(cpt) + "-" + output_path)
+    extractor = PDFTextExtractor(file_path)
+    return extractor.save_text(file_path, output_path + "-" + str(cpt))
 
-def extract_pdf_structured(pdf_path: str, cpt: int, output_dir: str):
+def extract_pdf_structured(file_path: str, cpt: int, output_dir: str):
     """Extract PDF text in structured format"""
-    extractor = PDFTextExtractor(pdf_path)
-    return extractor.save_structured_text(output_dir + "-" + str(cpt))
+    extractor = PDFTextExtractor(file_path)
+    return extractor.save_structured_text(file_path, output_dir + "-" + str(cpt))
 
 def print_requirements():
     """Print installation requirements"""
@@ -419,23 +421,26 @@ if __name__ == "__main__":
 
     files = list_files_by_type_os(FILES_PATH, ".pdf")
     for pdf_path in files:
+        file = FILES_PATH + os.sep + pdf_path
+        output = OUTPUT_PATH+os.sep+"extracted_content"
         try:
             # Simple extraction
+
             print("\n" + "="*60)
             print("SIMPLE TEXT EXTRACTION")
             print("="*60)
-            text = extract_pdf_text(FILES_PATH+pdf_path, cpt, OUTPUT_PATH+os.sep+"extracted_content")
+            text = extract_pdf_text(file, cpt, output)
             print(f"✓ Extraction completed for file {cpt} {pdf_path}")
 
             # Structured extraction
             print("\n" + "="*60)
             print("STRUCTURED TEXT EXTRACTION")
             print("="*60)
-            extract_pdf_structured(FILES_PATH+pdf_path, cpt, OUTPUT_PATH+os.sep+"extracted_content")
+            extract_pdf_structured(file, cpt, output)
             print(f"✓ Structured extraction completed: {cpt} {pdf_path}")
             cpt = cpt + 1
         except FileNotFoundError:
-            print(f"Error: PDF file '{FILES_PATH+pdf_path}' not found.")
+            print(f"Error: PDF file '{file}' not found.")
             print("Please ensure the PDF file exists in the current directory.")
         except Exception as e:
             print(f"Error during extraction: {e}")

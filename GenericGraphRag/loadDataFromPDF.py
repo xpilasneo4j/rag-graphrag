@@ -13,7 +13,7 @@ from neo4j_graphrag.indexes import create_vector_index
 import sys
 
 if len(sys.argv) != 2:
-    sys.exit("Please provide as an argument a env file built on the template.env provided")
+    sys.exit("Please provide as an argument an env file built on the template.env provided")
 else:
     ENV_FILE = sys.argv[1]
 

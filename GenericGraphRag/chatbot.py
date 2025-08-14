@@ -2,19 +2,25 @@ import configparser
 import os
 import streamlit as st
 import neo4j
-from neo4j_graphrag.retrievers import VectorRetriever
 from neo4j_graphrag.llm import AzureOpenAILLM
 from neo4j_graphrag.embeddings.openai import AzureOpenAIEmbeddings
 from neo4j_graphrag.retrievers import VectorCypherRetriever
 from neo4j_graphrag.generation import RagTemplate
 from neo4j_graphrag.generation.graphrag import GraphRAG
+import sys
+
+if len(sys.argv) != 2:
+    sys.exit("Please provide as an argument a env file built on the template.env provided")
+else:
+    ENV_FILE = sys.argv[1]
+
+# Config loading
+config = configparser.ConfigParser()
+config.read(ENV_FILE)
 
 st.set_page_config(layout="wide")
 st.title("NEO4J GRAPHRAG CHATBOT")
 st.html("<h1 style='font-size:15px;'><a href='https://neo4j.com/generativeai/'>Neo4j GraphRAG</a></h1>")
-
-config = configparser.ConfigParser()
-config.read('run1.env') # TO BE CHANGED TO YOUR FILE
 
 #### Program variable setup
 # Neo4j

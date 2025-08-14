@@ -2,7 +2,10 @@
 
 ## Setup
 - env file:
-  - template.env needs to be filled with all the details of your setup (Azure OpenAI details, Neo4j access...)
+  - template.env needs to be filled with all the details of your setup (Azure OpenAI details, Neo4j access, paths...)
+  - Create your own env files and pass them as an argument when you run the program. Examples:
+    - "python create_content.py run.env"
+    - "python loadPDFFromContent.py run.env"
 - 3 python files:
   - loadDataPDFNoModel.py to generate RAG/GraphRAG without any specific model
   - loadDataPDFWithModel.py to generate RAG/GraphRAG with a specific model filled in a schema.json file

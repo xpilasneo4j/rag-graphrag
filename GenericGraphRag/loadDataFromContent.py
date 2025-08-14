@@ -2,6 +2,7 @@ import asyncio
 import configparser
 import os
 import time
+import json
 import neo4j
 from neo4j_graphrag.embeddings import AzureOpenAIEmbeddings
 from neo4j_graphrag.experimental.pipeline.kg_builder import SimpleKGPipeline
@@ -9,10 +10,16 @@ from neo4j_graphrag.experimental.pipeline.pipeline import PipelineResult
 from neo4j_graphrag.llm import LLMInterface
 from neo4j_graphrag.llm import AzureOpenAILLM
 from neo4j_graphrag.indexes import create_vector_index
+import sys
+
+if len(sys.argv) != 2:
+    sys.exit("Please provide as an argument a env file built on the template.env provided")
+else:
+    ENV_FILE = sys.argv[1]
 
 # Config loading
 config = configparser.ConfigParser()
-config.read('run1.env') # TO BE CHANGED TO YOUR FILE
+config.read(ENV_FILE)
 
 #### Program variable setup
 # Neo4j
@@ -27,16 +34,28 @@ OPENAI_KEY = config.get('Conf','openai_api_key')
 MODEL_NAME = config.get('Conf','azure_open_ai_model')
 API_VERSION = config.get('Conf','openai_api_version')
 # FILES
-FILES_PATH = config.get('Conf','files_path')
+#FILES_PATH = config.get('Conf','files_path') # Not needed as using the output
+if config.has_option('Conf', 'schema_file'):
+    SCHEMA_FILE = config.get('Conf','schema_file')
+else:
+    SCHEMA_FILE = ''
 # EMBEDDINGS
 EMB_MODEL_NAME = config.get('Conf','azure_open_ai_emb_model')
 EMB_API_VERSION = config.get('Conf','azure_open_ai_emb_version')
 EMB_SIZE = config.get('Conf','emb_size')
+# CREATE CONTENT
+OUTPUT_PATH = config.get('Conf','output_path')
 
 #Environment variables setup
 os.environ["AZURE_OPENAI_ENDPOINT"] = END_POINT
 os.environ["OPENAI_API_KEY"] = OPENAI_KEY
 os.environ["AZURE_OPENAI_API_KEY"] = OPENAI_KEY
+
+# Define Schema
+if len(SCHEMA_FILE) > 3:
+    SCHEMA = json.load(open(SCHEMA_FILE))
+else:
+    SCHEMA = None
 
 # Building Neo4j and Embeddings components
 NEO4J_DRIVER = neo4j.GraphDatabase.driver(URI, auth=(USER, PASSWORD), database=DATABASE)
@@ -45,7 +64,7 @@ create_vector_index(NEO4J_DRIVER, name="text_embeddings", label="Chunk",
 
 EMBEDDINGS=AzureOpenAIEmbeddings(
     model=EMB_MODEL_NAME,
-    api_version=EMB_API_VERSION
+    api_version=EMB_API_VERSION,
 )
 
 # Pipeline execution
@@ -53,13 +72,23 @@ async def define_and_run_pipeline(
         llm: LLMInterface,
         file_path: str
 ) -> PipelineResult:
-    kg_builder = SimpleKGPipeline(
-        llm=llm,
-        driver=NEO4J_DRIVER,
-        embedder=EMBEDDINGS,
-        from_pdf=True,
-        neo4j_database=DATABASE,
-    )
+    if SCHEMA is None:
+        kg_builder = SimpleKGPipeline(
+            llm=llm,
+            driver=NEO4J_DRIVER,
+            embedder=EMBEDDINGS,
+            from_pdf=True,
+            neo4j_database=DATABASE,
+        )
+    else:
+        kg_builder = SimpleKGPipeline(
+            llm=llm,
+            driver=NEO4J_DRIVER,
+            embedder=EMBEDDINGS,
+            schema=SCHEMA,
+            from_pdf=True,
+            neo4j_database=DATABASE,
+        )
     return await kg_builder.run_async(file_path=file_path)
 
 # Main for one file
@@ -79,9 +108,11 @@ async def main(file_path: str) -> PipelineResult:
 ### MAIN
 if __name__ == "__main__":
     # Iterating for each PDF of the directory
-    for name in os.listdir(FILES_PATH):
-        if name.endswith(".pdf"):
-            print(" ----------- Start " + name)
-            print(asyncio.run(main(FILES_PATH + name)))
-            time.sleep(5) # Needed for LLM Token Limit
-            print(" ----------- END " + name)
+    for dir in os.listdir(OUTPUT_PATH):
+        if 'extracted_content' in dir:
+            for name in os.listdir(OUTPUT_PATH + os.sep + dir):
+                if name.endswith(".txt"):
+                    print(" ----------- Start " + name)
+                    print(asyncio.run(main(OUTPUT_PATH + dir + os.sep + name)))
+                    time.sleep(5) # Needed for LLM Token Limit
+                    print(" ----------- END " + name)

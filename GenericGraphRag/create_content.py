@@ -51,8 +51,7 @@ class PDFTextExtractor:
 
                 # Add page header
                 complete_text.append(f"\n{'='*80}")
-                complete_text.append(f"PAGE {page_num + 1}")
-                complete_text.append(f"{'='*80}\n")
+                complete_text.append(f"PAGE {page_num + 1}\n")
 
                 # Extract text content
                 text_content = self._extract_text_with_layout(page_num)
@@ -274,6 +273,9 @@ class PDFTextExtractor:
     def save_text(self, doc: str, output_dir: str):
         """Extract and save complete text to file"""
         self.logger.info(f"Starting text extraction for {doc}...")
+
+        Path(output_dir).mkdir(exist_ok=True)
+
         complete_text = self.extract_complete_text()
 
         # Add document header
@@ -314,15 +316,15 @@ Total Pages: {len(self.doc) if self.doc else 'Unknown'}
 
         for i, page_content in enumerate(pages[1:], 1):  # Skip header
             if page_content.strip():
-                with open(f"{output_dir}" + os.sep + "page_{i:03d}.txt", 'w', encoding='utf-8') as f:
-                    f.write(f"PAGE {i}\n{'='*40}\n{page_content.strip()}")
+                with open(f"{output_dir}" + os.sep + f"page_{i:03d}.txt", 'w', encoding='utf-8') as f:
+                    f.write(f"{page_content.strip()}")
 
         # Generate summary
         summary = self._generate_summary(complete_text)
         with open(f"{output_dir}" + os.sep + "extraction_summary.txt", 'w', encoding='utf-8') as f:
             f.write(summary)
 
-        self.logger.info(f"Structured extraction completed. Files saved in: {output_dir}/")
+        self.logger.info(f"Structured extraction completed. Files saved in: {output_dir}")
 
         return complete_text
 
@@ -361,15 +363,15 @@ FILE STRUCTURE:
 """
         return summary
 
-def extract_pdf_text(file_path: str, cpt: int, output_path: str):
+def extract_pdf_text(file_path: str, output_path: str):
     """Simple function to extract text from PDF"""
     extractor = PDFTextExtractor(file_path)
-    return extractor.save_text(file_path, output_path + "-" + str(cpt))
+    return extractor.save_text(file_path, output_path)
 
-def extract_pdf_structured(file_path: str, cpt: int, output_dir: str):
+def extract_pdf_structured(file_path: str, output_dir: str):
     """Extract PDF text in structured format"""
     extractor = PDFTextExtractor(file_path)
-    return extractor.save_structured_text(file_path, output_dir + "-" + str(cpt))
+    return extractor.save_structured_text(file_path, output_dir)
 
 def print_requirements():
     """Print installation requirements"""
@@ -392,7 +394,7 @@ USAGE:
 extract_pdf_text("document.pdf", "output.txt")
 
 # Structured extraction (separate files)
-extract_pdf_structured("document.pdf", cpt, "output_folder")
+extract_pdf_structured("document.pdf", "output_folder")
 """
     print(requirements)
 
@@ -421,27 +423,26 @@ if __name__ == "__main__":
 
     files = list_files_by_type_os(FILES_PATH, ".pdf")
     for pdf_path in files:
-        file = FILES_PATH + os.sep + pdf_path
-        output = OUTPUT_PATH+os.sep+"extracted_content"
+        file = os.path.abspath(FILES_PATH + os.sep + pdf_path)
+        output_cpt = os.path.abspath(OUTPUT_PATH + os.sep + "extracted_content-" + str(cpt))
         try:
             # Simple extraction
-
             print("\n" + "="*60)
             print("SIMPLE TEXT EXTRACTION")
             print("="*60)
-            text = extract_pdf_text(file, cpt, output)
+            text = extract_pdf_text(file, output_cpt)
             print(f"✓ Extraction completed for file {cpt} {pdf_path}")
 
             # Structured extraction
             print("\n" + "="*60)
             print("STRUCTURED TEXT EXTRACTION")
             print("="*60)
-            extract_pdf_structured(file, cpt, output)
+            extract_pdf_structured(file, output_cpt)
             print(f"✓ Structured extraction completed: {cpt} {pdf_path}")
             cpt = cpt + 1
-        except FileNotFoundError:
-            print(f"Error: PDF file '{file}' not found.")
-            print("Please ensure the PDF file exists in the current directory.")
+        except FileNotFoundError as fe:
+            print(f"File error : {fe}")
+            print("Please ensure all the paths and file names are corrects.")
         except Exception as e:
             print(f"Error during extraction: {e}")
             print("Please ensure all dependencies are installed correctly.")

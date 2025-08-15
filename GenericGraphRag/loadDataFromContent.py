@@ -10,6 +10,7 @@ from neo4j_graphrag.experimental.pipeline.pipeline import PipelineResult
 from neo4j_graphrag.llm import LLMInterface
 from neo4j_graphrag.llm import AzureOpenAILLM
 from neo4j_graphrag.indexes import create_vector_index
+from langchain_community.document_loaders import DirectoryLoader
 import sys
 
 if len(sys.argv) != 2:
@@ -70,14 +71,14 @@ EMBEDDINGS=AzureOpenAIEmbeddings(
 # Pipeline execution
 async def define_and_run_pipeline(
         llm: LLMInterface,
-        file_path: str
+        content: str
 ) -> PipelineResult:
     if SCHEMA is None:
         kg_builder = SimpleKGPipeline(
             llm=llm,
             driver=NEO4J_DRIVER,
             embedder=EMBEDDINGS,
-            from_pdf=True,
+            from_pdf=False,
             neo4j_database=DATABASE,
         )
     else:
@@ -86,13 +87,13 @@ async def define_and_run_pipeline(
             driver=NEO4J_DRIVER,
             embedder=EMBEDDINGS,
             schema=SCHEMA,
-            from_pdf=True,
+            from_pdf=False,
             neo4j_database=DATABASE,
         )
-    return await kg_builder.run_async(file_path=file_path)
+    return await kg_builder.run_async(text=content)
 
 # Main for one file
-async def main(file_path: str) -> PipelineResult:
+async def main(content: str) -> PipelineResult:
     llm = AzureOpenAILLM(
         model_name=MODEL_NAME,
         api_version=API_VERSION,
@@ -101,7 +102,7 @@ async def main(file_path: str) -> PipelineResult:
             "response_format": {"type": "json_object"},
         }
     )
-    res_pipeline = await define_and_run_pipeline(llm, file_path)
+    res_pipeline = await define_and_run_pipeline(llm, content)
     await llm.async_client.close()
     return res_pipeline
 
@@ -110,9 +111,10 @@ if __name__ == "__main__":
     # Iterating for each PDF of the directory
     for dir in os.listdir(OUTPUT_PATH):
         if 'extracted_content' in dir:
-            for name in os.listdir(OUTPUT_PATH + os.sep + dir):
-                if name.endswith(".txt"):
-                    print(" ----------- Start " + name)
-                    print(asyncio.run(main(OUTPUT_PATH + dir + os.sep + name)))
+            loader=DirectoryLoader(path=OUTPUT_PATH + os.sep + dir, glob="page*.txt")
+            documents=loader.load()
+            for d in documents:
+                    print(" ----------- Start " + d.metadata['source'])
+                    print(asyncio.run(main(d.page_content)))
                     time.sleep(5) # Needed for LLM Token Limit
-                    print(" ----------- END " + name)
+                    print(" ----------- END " + d.metadata['source'])
